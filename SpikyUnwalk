@@ -1,0 +1,119 @@
+--// CONFIG
+local IDLE_ASSET = "rbxassetid://0" -- PON AQUÍ tu animación tiesa (idle)
+
+--// UI CREATION
+local sg = Instance.new("ScreenGui", game.CoreGui)
+sg.Name = "FreezeAnimUI"
+
+local frame = Instance.new("Frame", sg)
+frame.Size = UDim2.new(0, 200, 0, 80)
+frame.Position = UDim2.new(0.5, -100, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(15,15,25)
+frame.BorderSizePixel = 0
+
+local uiCorner = Instance.new("UICorner", frame)
+uiCorner.CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(0,170,255)
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local btn = Instance.new("TextButton", frame)
+btn.Size = UDim2.new(1, -20, 0, 45)
+btn.Position = UDim2.new(0, 10, 0, 18)
+btn.BackgroundColor3 = Color3.fromRGB(25,25,35)
+btn.Text = "Enable Desync Idle"
+btn.Font = Enum.Font.GothamBold
+btn.TextColor3 = Color3.fromRGB(255,255,255)
+btn.TextScaled = true
+
+local btnCorner = Instance.new("UICorner", btn)
+btnCorner.CornerRadius = UDim.new(0, 10)
+
+local clickSound = Instance.new("Sound", btn)
+clickSound.SoundId = "rbxassetid://7149254324"
+clickSound.Volume = 1
+
+--// ANIMATION CONTROL
+local PLAYERS = game:GetService("Players")
+local LOCAL = PLAYERS.LocalPlayer
+local running = false
+local savedAnimations = {}
+
+-- Guardar animaciones originales
+local function backupAnimations(animate)
+    savedAnimations = {}
+    for _, obj in ipairs(animate:GetDescendants()) do
+        if obj:IsA("Animation") then
+            savedAnimations[obj] = obj.AnimationId
+        end
+    end
+end
+
+local function restoreAnimations()
+    for animObj, originalId in pairs(savedAnimations) do
+        if animObj then
+            animObj.AnimationId = originalId
+        end
+    end
+end
+
+local forcedTrack = nil
+
+local function enableFreeze(char)
+    local humanoid = char:WaitForChild("Humanoid", 5)
+    local animate = char:WaitForChild("Animate", 5)
+
+    backupAnimations(animate)
+
+    for _, desc in ipairs(animate:GetDescendants()) do
+        if desc:IsA("Animation") then
+            local nameLower = desc.Name:lower()
+            if not string.find(nameLower, "idle") then
+                desc.AnimationId = ""
+            end
+        end
+    end
+
+    local anim = Instance.new("Animation")
+    anim.Name = "ForcedIdle"
+    anim.AnimationId = IDLE_ASSET
+
+    forcedTrack = humanoid:LoadAnimation(anim)
+    forcedTrack.Priority = Enum.AnimationPriority.Action
+    forcedTrack.Looped = true
+    forcedTrack:Play()
+end
+
+local function disableFreeze()
+    if forcedTrack then
+        forcedTrack:Stop()
+        forcedTrack = nil
+    end
+    restoreAnimations()
+end
+
+-- MAIN TOGGLE
+btn.MouseButton1Click:Connect(function()
+    clickSound:Play()
+    running = not running
+
+    if running then
+        btn.Text = "Disable Desync Idle"
+        enableFreeze(LOCAL.Character)
+    else
+        btn.Text = "Enable Desync Idle"
+        disableFreeze()
+    end
+end)
+
+if LOCAL.Character then
+    backupAnimations(LOCAL.Character:WaitForChild("Animate"))
+end
+LOCAL.CharacterAdded:Connect(function(char)
+    if running then
+        task.wait(1)
+        enableFreeze(char)
+    end
+end)
