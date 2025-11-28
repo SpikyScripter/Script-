@@ -1,48 +1,72 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
--- Crear ScreenGui
+--=== CREAR GUI ===--
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "PlayerBlocker"
+gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Crear Frame
+-- Ventana principal (más pequeña)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 300)
-frame.Position = UDim2.new(0, 20, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.Size = UDim2.new(0, 180, 0, 220)
+frame.Position = UDim2.new(0, 20, 0, 150)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
 frame.Parent = gui
+
+-- Borde redondeado
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
 
 -- Título
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "Lista de Jugadores"
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+title.Size = UDim2.new(1, 0, 0, 26)
+title.Text = "Jugadores"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+title.BorderSizePixel = 0
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
 title.Parent = frame
 
--- ScrollingFrame (lista)
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0,10)
+titleCorner.Parent = title
+
+-- Lista:
 local list = Instance.new("ScrollingFrame")
-list.Size = UDim2.new(1, 0, 1, -30)
-list.Position = UDim2.new(0, 0, 0, 30)
+list.Size = UDim2.new(1, -10, 1, -36)
+list.Position = UDim2.new(0, 5, 0, 30)
 list.CanvasSize = UDim2.new(0, 0, 0, 0)
-list.ScrollBarThickness = 8
-list.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+list.ScrollBarThickness = 4
+list.BackgroundTransparency = 1
 list.Parent = frame
 
 local layout = Instance.new("UIListLayout")
 layout.Parent = list
-layout.Padding = UDim.new(0, 5)
+layout.Padding = UDim.new(0, 4)
 
--- Función que crea el botón
+--=== FUNCIÓN PARA CREAR BOTONES ===--
+
 local function CreatePlayerButton(player)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    btn.Size = UDim2.new(1, -5, 0, 26)
+    btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    btn.BorderSizePixel = 0
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.Text = "Bloquear: " .. player.Name
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Text = player.Name
     btn.Parent = list
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
 
     btn.MouseButton1Click:Connect(function()
         StarterGui:SetCore("PromptBlockPlayer", player)
@@ -51,27 +75,59 @@ local function CreatePlayerButton(player)
     list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
 end
 
--- Agregar a todos los jugadores actuales
+--=== CARGAR JUGADORES INICIALES ===--
+
 for _, p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then
         CreatePlayerButton(p)
     end
 end
 
--- Cuando entra un jugador nuevo
 Players.PlayerAdded:Connect(function(plr)
     if plr ~= LocalPlayer then
         CreatePlayerButton(plr)
     end
 end)
 
--- Cuando un jugador sale
 Players.PlayerRemoving:Connect(function(plr)
-    -- Buscar su botón y borrarlo
     for _, btn in pairs(list:GetChildren()) do
-        if btn:IsA("TextButton") and btn.Text == "Bloquear: " .. plr.Name then
+        if btn:IsA("TextButton") and btn.Text == plr.Name then
             btn:Destroy()
         end
     end
     list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+end)
+
+--=== HACER LA VENTANA MOVIBLE ===--
+
+local dragging = false
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                               startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        update(input)
+    end
 end)
