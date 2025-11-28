@@ -1,0 +1,77 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+
+-- Crear ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "PlayerBlocker"
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Crear Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 300)
+frame.Position = UDim2.new(0, 20, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.Parent = gui
+
+-- Título
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "Lista de Jugadores"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+title.Parent = frame
+
+-- ScrollingFrame (lista)
+local list = Instance.new("ScrollingFrame")
+list.Size = UDim2.new(1, 0, 1, -30)
+list.Position = UDim2.new(0, 0, 0, 30)
+list.CanvasSize = UDim2.new(0, 0, 0, 0)
+list.ScrollBarThickness = 8
+list.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+list.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = list
+layout.Padding = UDim.new(0, 5)
+
+-- Función que crea el botón
+local function CreatePlayerButton(player)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Text = "Bloquear: " .. player.Name
+    btn.Parent = list
+
+    btn.MouseButton1Click:Connect(function()
+        StarterGui:SetCore("PromptBlockPlayer", player)
+    end)
+
+    list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+end
+
+-- Agregar a todos los jugadores actuales
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        CreatePlayerButton(p)
+    end
+end
+
+-- Cuando entra un jugador nuevo
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= LocalPlayer then
+        CreatePlayerButton(plr)
+    end
+end)
+
+-- Cuando un jugador sale
+Players.PlayerRemoving:Connect(function(plr)
+    -- Buscar su botón y borrarlo
+    for _, btn in pairs(list:GetChildren()) do
+        if btn:IsA("TextButton") and btn.Text == "Bloquear: " .. plr.Name then
+            btn:Destroy()
+        end
+    end
+    list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+end)
