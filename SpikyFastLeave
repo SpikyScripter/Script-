@@ -1,13 +1,14 @@
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local tweenService = game:GetService("TweenService")
 
--- UI Main
+-- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = playerGui
-screenGui.Name = "KickSwitchUI"
+screenGui.Name = "LeaveSwitchUI"
 screenGui.ResetOnSpawn = false
 
--- Frame contenedor (UI Pro style)
+-- Frame contenedor
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 200, 0, 60)
 frame.Position = UDim2.new(0.5, -100, 0.5, -30)
@@ -19,18 +20,48 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = frame
 
+-- Dragging System
+local dragging = false
+local dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+	end
+end)
+
+frame.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+frame.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
 -- Texto
 local title = Instance.new("TextLabel")
 title.Parent = frame
 title.Size = UDim2.new(1, -70, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Kick Switch"
+title.Text = "Leave"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 
--- Toggle Base
+-- Toggle base
 local toggle = Instance.new("Frame")
 toggle.Parent = frame
 toggle.Size = UDim2.new(0, 55, 0, 25)
@@ -42,7 +73,7 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 15)
 toggleCorner.Parent = toggle
 
--- Switch Button
+-- Botón del switch
 local knob = Instance.new("Frame")
 knob.Parent = toggle
 knob.Size = UDim2.new(0, 22, 0, 22)
@@ -54,31 +85,28 @@ local knobCorner = Instance.new("UICorner")
 knobCorner.CornerRadius = UDim.new(1, 0)
 knobCorner.Parent = knob
 
--- Animations
-local tweenService = game:GetService("TweenService")
-
+-- Lógica del switch
 local toggled = false
 
-local function setToggleState(state)
+local function setToggle(state)
 	toggled = state
 
 	if toggled then
-		-- Turn ON
+		-- Animación encendido
 		tweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 170, 255)}):Play()
 		tweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -24, 0.5, -11)}):Play()
 
-		-- Kick player
-		player:Kick("You toggled Kick Switch.")
+		player:Kick("You left the game.")
 	else
-		-- Turn OFF
+		-- Animación apagado
 		tweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
 		tweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -11)}):Play()
 	end
 end
 
--- Click detection
+-- Detectar click
 toggle.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		setToggleState(not toggled)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		setToggle(not toggled)
 	end
 end)
